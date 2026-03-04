@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>엠코딩랩 | IT 경시대회 C언어 모의고사</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Malgun Gothic', sans-serif; background: #f0f2f5; padding: 20px; line-height: 1.6; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .header { background: #007bff; color: white; border-radius: 15px; padding: 25px; text-align: center; margin-bottom: 20px; }
+        .student-info { background: white; border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .input-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        .input-group input { flex: 1; min-width: 150px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
+        .problem-card { background: white; border-radius: 15px; padding: 25px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .problem-num { display: inline-block; background: #007bff; color: white; padding: 4px 12px; border-radius: 20px; font-weight: bold; margin-bottom: 10px; }
+        .problem-text { font-weight: bold; margin-bottom: 15px; color: #333; white-space: pre-wrap; }
+        .code-block { background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 8px; font-family: 'Consolas', monospace; font-size: 14px; margin-bottom: 15px; white-space: pre-wrap; border-left: 5px solid #007bff; overflow-x: auto; }
+        .options { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 15px; }
+        .option-btn { background: #fff; border: 2px solid #e0e0e0; padding: 12px 20px; border-radius: 8px; cursor: pointer; text-align: left; transition: 0.2s; font-size: 15px; }
+        .option-btn:hover { border-color: #007bff; background: #f0f7ff; }
+        .option-btn.selected { background: #007bff; color: white; border-color: #007bff; }
+        .short-answer { width: 100%; padding: 15px; border: 2px solid #007bff; border-radius: 8px; font-size: 16px; font-family: 'Consolas', monospace; }
+        .submit-section { text-align: center; padding: 40px 0; }
+        .submit-btn { background: #007bff; color: white; border: none; padding: 18px 80px; font-size: 20px; font-weight: bold; border-radius: 40px; cursor: pointer; transition: 0.3s; }
+        .submit-btn:hover { background: #0056b3; transform: scale(1.05); }
+        .result-section { background: white; border-radius: 15px; padding: 40px; text-align: center; display: none; }
+        .timer { position: fixed; top: 20px; right: 20px; background: white; padding: 10px 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); font-weight: bold; color: #007bff; z-index: 100; font-size: 18px; border: 2px solid #007bff; }
+        .hint { font-size: 0.9em; color: #666; margin-top: 10px; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="timer" id="timer">⏱️ 00:00</div>
+    <div class="container">
+        <div class="header">
+            <h1>2025 청소년 IT 경시대회 모의고사</h1>
+            <p>MCODINGLAB | C언어 부문 통합 (초·중·고)</p>
+        </div>
+        
+        <div class="student-info">
+            <div class="input-group">
+                <input type="text" id="studentName" placeholder="이름" required>
+                <input type="text" id="birthDate" placeholder="생년월일 (예: 120101)" maxlength="6">
+            </div>
+            <p style="margin-top:10px; font-size:0.9em; color:#666;">※ 객관식 30문항(각 2점) + 주관식 5문항(각 8점) = 총 100점 / 제한시간 60분</p>
+        </div>
+
+        <div id="quizContainer"></div>
+
+        <div class="submit-section">
+            <button class="submit-btn" id="submitBtn" onclick="submitQuiz()">모의고사 최종 제출하기</button>
+        </div>
+
+        <div class="result-section" id="resultSection">
+            <h2 style="color:#007bff; margin-bottom:20px;">시험이 종료되었습니다!</h2>
+            <div style="font-size: 64px; font-weight: bold; color: #333; margin-bottom: 20px;" id="scoreDisplay">0점</div>
+            <p id="timeDisplay" style="margin-bottom:20px; font-size:18px;"></p>
+            <p>결과가 선생님께 성공적으로 전송되었습니다. 수고하셨습니다!</p>
+            <button onclick="location.reload()" style="margin-top:20px; padding:10px 20px; cursor:pointer;">다시 풀기</button>
+        </div>
+    </div>
+
+    <script>
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx9jTnY2awWkXbpQHFGMsYlz-_kju8rN5pMNJPyi3jtLM3d4G0RlCiJL4vYCjGGlFbE_Q/exec';
+
+        const problems = [
+            // 객관식 (1~30)
+            { id: 1, type: "choice", q: "C 프로그램의 실행 과정을 올바르게 나열한 것은?", opts: ["전처리 → 컴파일 → 링킹 → 어셈블", "컴파일 → 전처리 → 어셈블 → 링킹", "전처리 → 컴파일 → 어셈블 → 링킹", "어셈블 → 전처리 → 컴파일 → 링킹", "전처리 → 링킹 → 컴파일 → 어셈블"], ans: "3" },
+            { id: 2, type: "choice", q: "다음 함수와 해당 헤더 파일의 짝이 올바르지 않은 것은?", opts: ["strlen() — <string.h>", "printf() — <stdio.h>", "malloc() — <stdlib.h>", "pow() — <stdlib.h>", "abs() — <stdlib.h>"], ans: "4" },
+            { id: 3, type: "choice", q: "실행 결과는?", code: "#include <stdio.h>\nint main() {\n   unsigned short us = 65535;\n   us = us + 3;\n   printf(\"%d\\n\", us);\n   return 0;\n}", opts: ["65538", "0", "2", "3", "-1"], ans: "3" },
+            { id: 4, type: "choice", q: "실행 결과는?", code: "#include <stdio.h>\nint main() {\n   int a = 13, b = 7;\n   printf(\"%d %d %d\\n\", a & b, a | b, a ^ b);\n   return 0;\n}", opts: ["5 15 10", "7 13 6", "5 13 10", "7 15 6", "1 15 12"], ans: "1" },
+            { id: 5, type: "choice", q: "실행 결과는?", code: "#include <stdio.h>\nint main() {\n   int a = 17, b = 23;\n   int c = (a > b) ? a - b : b - a;\n   int d = (c % 2 == 0) ? c / 2 : c * 2;\n   printf(\"%d\\n\", d);\n   return 0;\n}", opts: ["3", "6", "12", "-6", "5"], ans: "1" },
+            { id: 6, type: "choice", q: "[빈 칸]에 들어갈 조건식으로 올바른 것은? (윤년 조건)", code: "if ( [빈 칸] )\n    printf(\"윤년\\n\");", opts: ["(year % 4 == 0 && year % 100 != 0) || year % 400 == 0", "(year % 4 == 0 || year % 100 != 0) && year % 400 == 0", "year % 4 == 0 && year % 100 != 0 && year % 400 == 0", "year % 4 == 0 || year % 100 != 0 || year % 400 == 0", "(year % 4 == 0 && year % 100 == 0) || year % 400 == 0"], ans: "1" },
+            { id: 7, type: "choice", q: "실행 결과는?", code: "#include <stdio.h>\nint main() {\n   int sum = 0;\n   for (int i = 1; i <= 30; i++) {\n        if (i % 3 == 0 && i % 5 != 0)\n            sum += i;\n   }\n   printf(\"%d\\n\", sum);\n   return 0;\n}", opts: ["120", "135", "105", "90", "75"], ans: "1" },
+            { id: 8, type: "choice", q: "실행 결과는?", code: "void func(int n) {\n   if (n <= 0) return;\n   printf(\"%d \", n);\n   func(n - 3);\n   printf(\"%d \", n);\n}\nint main() { func(10); return 0; }", opts: ["10 7 4 1 1 4 7 10", "10 7 4 1", "10 7 4 1 4 7 10", "1 4 7 10 10 7 4 1", "10 7 4 1 1 4 7 10 10"], ans: "1" },
+            { id: 9, type: "choice", q: "실행 결과는?", code: "int f(int n) {\n   if (n == 0) return 2;\n   if (n == 1) return 3;\n   if (n == 2) return 7;\n   return f(n-1) + 2 * f(n-3);\n}\nint main() { printf(\"%d\\n\", f(6)); return 0; }", opts: ["53", "49", "55", "47", "51"], ans: "1" },
+            { id: 10, type: "choice", q: "실행 결과는?", code: "void toBin(int n) {\n   if (n == 0) return;\n   toBin(n / 2);\n   printf(\"%d\", n % 2);\n}\nint main() { toBin(45); return 0; }", opts: ["101101", "110101", "101011", "110110", "101110"], ans: "1" },
+            { id: 11, type: "choice", q: "실행 결과는? (정수 나눗셈 주의)", code: "int a[] = {85, 92, 73, 98, 67};\nint n = 5, max = a[0], min = a[0], sum = 0;\nfor (int i = 0; i < n; i++) {\n    if (a[i] > max) max = a[i];\n    if (a[i] < min) min = a[i];\n    sum += a[i];\n}\nprintf(\"%d\\n\", (sum - max - min) / (n - 2));", opts: ["83", "85", "80", "82", "84"], ans: "1" },
+            { id: 12, type: "choice", q: "실행 결과는?", code: "int m[4][4] = {{1,2,3,4},{5,6,7,8},{9,10,11,12},{13,14,15,16}};\nint s1 = 0, s2 = 0;\nfor (int i = 0; i < 4; i++) {\n    s1 += m[i][i];\n    s2 += m[i][3 - i];\n}\nprintf(\"%d %d\\n\", s1, s2);", opts: ["34 34", "34 30", "30 34", "34 28", "36 34"], ans: "1" },
+            { id: 13, type: "choice", q: "실행 결과는?", code: "char s[] = \"ABRACADABRA\";\nint cnt[26] = {0};\nfor (int i = 0; i < strlen(s); i++) cnt[s[i] - 'A']++;\nprintf(\"%d %d %d\\n\", cnt[0], cnt[1], cnt[2]);", opts: ["5 2 1", "4 2 1", "5 1 2", "5 2 2", "4 2 2"], ans: "1" },
+            { id: 14, type: "choice", q: "실행 결과는?", code: "char a[] = \"HELLO\";\nchar b[] = \"HELP\";\nint r = strcmp(a, b);\nif (r < 0) printf(\"A\");\nelse if (r > 0) printf(\"B\");\nelse printf(\"C\");", opts: ["A", "B", "C", "0", "에러 발생"], ans: "1" },
+            { id: 15, type: "choice", q: "실행 결과는? (매크로 함정)", code: "#define D(X) X + X\n#define M(X) X * X\nint main() {\n   int a = 3;\n   printf(\"%d %d\\n\", D(a * 2), M(a + 1));\n   return 0;\n}", opts: ["12 16", "12 7", "10 16", "10 7", "12 10"], ans: "2" },
+            { id: 16, type: "choice", q: "[빈 칸]에 들어갈 코드는? (봉우리 개수 세기)", code: "for (int i = 1; i < n - 1; i++) {\n    if ( [빈 칸] ) cnt++;\n}", opts: ["a[i] > a[i-1] && a[i] > a[i+1]", "a[i] >= a[i-1] && a[i] >= a[i+1]", "a[i] > a[i-1] || a[i] > a[i+1]", "a[i] < a[i-1] && a[i] < a[i+1]", "a[i] > a[i-1] && a[i] < a[i+1]"], ans: "1" },
+            { id: 17, type: "choice", q: "선택정렬 [빈 칸 a], [빈 칸 b]에 들어갈 코드는?", code: "for (int i = 0; i < n - 1; i++) {\n    int min_idx = i;\n    for (int j = [빈 칸 a]; j < n; j++) {\n        if (a[j] < a[min_idx]) min_idx = j;\n    }\n    int temp = a[i];\n    a[i] = [빈 칸 b];\n    a[min_idx] = temp;\n}", opts: ["a: i + 1, b: a[min_idx]", "a: i, b: a[min_idx]", "a: i + 1, b: a[j]", "a: 0, b: a[min_idx]", "a: i + 1, b: a[i]"], ans: "1" },
+            { id: 18, type: "choice", q: "실행 결과는?", code: "int data[] = {5, 3, 8, 1, 7, 2};\nfor (int i = 0; i < 6; i++) {\n    if (data[i] % 2 == 1) push(data[i]);\n    else if (top >= 0) printf(\"%d \", pop());\n}\nwhile (top >= 0) printf(\"%d \", pop());", opts: ["3 1 7 5", "3 7 1 5", "5 3 1 7", "3 5 7 1", "3 1 5 7"], ans: "2" },
+            { id: 19, type: "choice", q: "실행 결과(연결 영역 수)는?", code: "int grid[4][5] = {{1,1,0,0,1},{0,1,0,1,1},{1,0,1,1,0},{1,1,0,1,0}};\n// 4방향 DFS 탐색 후 cnt++ 결과", opts: ["3", "4", "5", "6", "2"], ans: "1" },
+            { id: 20, type: "choice", q: "실행 결과는?", code: "int a = 0xFF;\nint b = 0177;\nint c = 10;\nprintf(\"%d\\n\", a - b + c);", opts: ["138", "128", "148", "118", "158"], ans: "1" },
+            { id: 21, type: "choice", q: "서식 지정자(%3d, %-8d, %08d) 실행 결과는?", code: "int a = 12345;\nprintf(\"%3d\\n\", a);\nprintf(\"%-8d|\\n\", a);\nprintf(\"%08d\\n\", a);", opts: ["12345\\n12345   |\\n00012345", "123\\n12345   |\\n00012345", "12345\\n   12345|\\n00012345", "12345\\n12345   |\\n  12345", "12345\\n12345  |\\n00012345"], ans: "1" },
+            { id: 22, type: "choice", q: "실행 결과(10~30 사이 소수 개수)는?", code: "int cnt = 0;\nfor (int i = 10; i <= 30; i++)\n    if (isPrime(i)) cnt++;\nprintf(\"%d\\n\", cnt);", opts: ["6", "5", "7", "4", "8"], ans: "1" },
+            { id: 23, type: "choice", q: "실행 결과는?", code: "void pattern(int n) {\n   if (n <= 0) return;\n   pattern(n - 1);\n   for (int i = 0; i < n; i++) printf(\"*\");\n   printf(\"\\n\");\n}\nint main() { pattern(4); return 0; }", opts: ["*\\n**\\n***\\n****", "****\\n***\\n**\\n*", "*\\n**\\n***\\n****\\n***\\n**\\n*", "****\\n****\\n****\\n****", "**\\n***\\n****"], ans: "1" },
+            { id: 24, type: "choice", q: "실행 결과는?", code: "int a[6] = {1, 3, 5, 0, 2, 4};\nint b = 0;\nfor (int i = 0; i < 2025; i++) b = a[b];\nprintf(\"%d\\n\", b);", opts: ["3", "0", "1", "5", "2"], ans: "2" },
+            { id: 25, type: "choice", q: "실행 결과는?", code: "char s[] = \"ALGORITHM\";\n// 문자열 뒤집기 수행 후\nprintf(\"%c%c%c\\n\", s[0], s[4], s[8]);", opts: ["MIA", "MAI", "MRI", "MRA", "MIR"], ans: "4" },
+            { id: 26, type: "choice", q: "실행 결과는? (2차원 배열 전치)", code: "int a[3][3] = {{1,2,3},{4,5,6},{7,8,9}};\n// i, j 교환 (i < j 조건)\nprintf(\"%d %d %d\\n\", a[1][0], a[1][1], a[1][2]);", opts: ["2 5 8", "4 5 6", "4 5 8", "2 5 6", "4 8 6"], ans: "1" },
+            { id: 27, type: "choice", q: "실행 결과는?", code: "for (int i = 1; i <= 4; i++) {\n    for (int j = 1; j <= i; j++) printf(\"%d\", i);\n    printf(\"\\n\");\n}", opts: ["1\\n22\\n333\\n4444", "1\\n12\\n123\\n1234", "1234\\n123\\n12\\n1", "1\\n21\\n321\\n4321", "4\\n33\\n222\\n1111"], ans: "1" },
+            { id: 28, type: "choice", q: "실행 결과는? (제곱의 합)", code: "int sum(int n, int acc) {\n   if (n == 0) return acc;\n   return sum(n - 1, acc + n * n);\n}\nint main() { printf(\"%d\\n\", sum(5, 0)); }", opts: ["55", "30", "15", "91", "25"], ans: "1" },
+            { id: 29, type: "choice", q: "실행 결과는? (아나그램 확인)", code: "char a[] = \"LISTEN\"; char b[] = \"SILENT\";\n// 문자별 개수 카운팅 비교 후 YES/NO 출력", opts: ["YES", "NO", "1", "0", "에러 발생"], ans: "1" },
+            { id: 30, type: "choice", q: "실행 결과(Queue FIFO)는?", code: "enqueue(10); enqueue(20); enqueue(30);\ndequeue(); // 10\nenqueue(40); enqueue(50);\n// 이후 4번 dequeue 결과", opts: ["10 20 30 40", "30 20 10 40", "10 30 40 50", "10 20 40 30", "10 20 30 50"], ans: "1" },
+
+            // 주관식 (31~35)
+            { id: 31, type: "short", q: "실행 결과를 작성하시오.", code: "for (int i = 1; i <= 5; i++) {\n    sum = 0;\n    for (int j = 1; j <= i; j++) {\n        sum += j; printf(\"%d\", j);\n        if (j < i) printf(\"+\");\n    }\n    printf(\"=%d\\n\", sum);\n}", ans: "1=1\n1+2=3\n1+2+3=6\n1+2+3+4=10\n1+2+3+4+5=15" },
+            { id: 32, type: "short", q: "실행 결과를 작성하시오. (Deque 연산)", code: "int data[] = {4, 7, 2, 9, 6, 3, 8, 1};\n// 홀수: push_front, 짝수: push_back\n// front부터 rear까지 출력", ans: "1 3 9 7 4 2 6 8" },
+            { id: 33, type: "short", q: "실행 결과를 작성하시오. (이분 탐색)", code: "int jobs[] = {1, 2, 3, 4, 5, 6, 7};\n// 3명에게 분배할 때 최대 작업 시간의 최솟값", ans: "11" },
+            { id: 34, type: "short", q: "실행 결과를 작성하시오. (재귀 호출 트리)", code: "void mystery(int n, int depth) {\n   if (n <= 0) return;\n   for (int i = 0; i < depth; i++) printf(\" \");\n   printf(\"%d\\n\", n);\n   mystery(n / 2, depth + 1);\n   mystery(n / 3, depth + 1);\n}\n// mystery(6, 0) 호출 결과", ans: "6\n 3\n  1\n  1\n 2\n  1" },
+            { id: 35, type: "short", q: "실행 결과를 작성하시오. (버블 정렬 2회전)", code: "int a[] = {5, 3, 8, 1, 9, 2, 7};\n// 바깥쪽 루프 i < 2 (2번 회전) 후 배열 상태", ans: "3 1 5 2 7 8 9" }
+        ];
+
+        let userAnswers = {};
+        let startTime = Date.now();
+
+        function renderQuiz() {
+            const container = document.getElementById('quizContainer');
+            problems.forEach(p => {
+                const card = document.createElement('div');
+                card.className = 'problem-card';
+                
+                let html = `<div class="problem-num">문제 ${p.id}</div>`;
+                html += `<div class="problem-text">${p.q}</div>`;
+                if(p.code) html += `<div class="code-block">${escapeHtml(p.code)}</div>`;
+                
+                if(p.type === 'choice') {
+                    html += `<div class="options">`;
+                    p.opts.forEach((opt, idx) => {
+                        html += `<button class="option-btn" id="p${p.id}_o${idx+1}" onclick="selectOption(${p.id}, ${idx+1})">${idx+1}. ${opt}</button>`;
+                    });
+                    html += `</div>`;
+                } else {
+                    html += `<p class="hint">※ 줄바꿈이 있는 경우 \\n 대신 실제 줄바꿈으로 작성하거나 한 줄로 정확히 작성하세요.</p>`;
+                    html += `<textarea class="short-answer" id="p${p.id}_ans" rows="4" placeholder="정답 입력" oninput="saveShort(${p.id}, this.value)"></textarea>`;
+                }
+                
+                card.innerHTML = html;
+                container.appendChild(card);
+            });
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        }
+
+        function selectOption(probId, optIdx) {
+            const problem = problems.find(p => p.id === probId);
+            problem.opts.forEach((_, i) => {
+                const el = document.getElementById(`p${probId}_o${i+1}`);
+                if(el) el.classList.remove('selected');
+            });
+            document.getElementById(`p${probId}_o${optIdx}`).classList.add('selected');
+            userAnswers[probId] = String(optIdx);
+        }
+
+        function saveShort(probId, val) {
+            userAnswers[probId] = val.trim();
+        }
+
+        async function submitQuiz() {
+            const name = document.getElementById('studentName').value;
+            const birth = document.getElementById('birthDate').value;
+            if(!name || !birth) return alert("이름과 생년월일을 입력해 주세요.");
+
+            if(!confirm("정말로 제출하시겠습니까?")) return;
+
+            let totalScore = 0;
+            let details = [];
+
+            problems.forEach(p => {
+                const userAns = userAnswers[p.id] || "";
+                // 주관식은 공백 및 줄바꿈 차이 무시하고 비교
+                const isCorrect = p.type === 'choice' 
+                    ? userAns === p.ans 
+                    : userAns.replace(/\s/g, '') === p.ans.replace(/\s/g, '');
+                
+                if(isCorrect) {
+                    totalScore += (p.type === 'choice' ? 2 : 8);
+                }
+                details.push({ id: p.id, isCorrect: isCorrect, userAns: userAns });
+            });
+
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const timeStr = `${Math.floor(elapsed/60)}분 ${elapsed%60}초`;
+
+            document.getElementById('scoreDisplay').textContent = totalScore + "점";
+            document.getElementById('timeDisplay').textContent = "소요 시간: " + timeStr;
+            
+            document.getElementById('quizContainer').style.display = 'none';
+            document.querySelector('.student-info').style.display = 'none';
+            document.querySelector('.submit-section').style.display = 'none';
+            document.getElementById('resultSection').style.display = 'block';
+            window.scrollTo(0, 0);
+
+            // 데이터 전송 시도
+            try {
+                const resultData = {
+                    timestamp: new Date().toLocaleString('ko-KR'),
+                    name: name,
+                    birth: birth,
+                    score: totalScore,
+                    time: timeStr,
+                    details: details
+                };
+                await fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(resultData) });
+            } catch(e) { console.error("전송 오류:", e); }
+        }
+
+        setInterval(() => {
+            const sec = Math.floor((Date.now() - startTime) / 1000);
+            const m = Math.floor(sec/60).toString().padStart(2,'0');
+            const s = (sec%60).toString().padStart(2,'0');
+            document.getElementById('timer').textContent = `⏱️ ${m}:${s}`;
+        }, 1000);
+
+        renderQuiz();
+    </script>
+</body>
+</html>
